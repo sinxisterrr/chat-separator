@@ -1,0 +1,26 @@
+{
+  "name": "lilis-parser",
+  "version": "1.0.0",
+  "description": "Thread Categorizer - Sort Conversation Threads into 14 AI Files",
+  "type": "module",
+  "main": "dist/core/categorize.js",
+  "scripts": {
+    "build": "tsc",
+    "categorize": "node dist/core/categorize.js",
+    "start": "node dist/core/categorize.js",
+    "parse": "node dist/core/parse.js",
+    "test-flow": "tsx test-flow.ts",
+    "diagnose": "tsx diagnose-content.ts"
+  },
+  "dependencies": {
+    "mammoth": "^1.6.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.2",
+    "@types/pg": "^8.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
