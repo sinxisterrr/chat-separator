@@ -147,6 +147,8 @@ function CategorizeScreen({
   const [assignments, setAssignments] = useState<AiAssignments>(buildInitialAssignments);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [skipped, setSkipped] = useState(0);
+  const [multiMode, setMultiMode] = useState(false);
+  const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
 
   const thread = threads[index];
   const progress = Math.round((index / threads.length) * 100);
@@ -159,6 +161,7 @@ function CategorizeScreen({
         return next;
       });
       setHistory((h) => [...h.slice(-9), { thread, categories: keys, wasSkip: false }]);
+      setPendingKeys(new Set());
       setIndex((i) => i + 1);
     },
     [thread]
@@ -166,6 +169,7 @@ function CategorizeScreen({
 
   const skip = useCallback(() => {
     setHistory((h) => [...h.slice(-9), { thread, categories: [], wasSkip: true }]);
+    setPendingKeys(new Set());
     setSkipped((s) => s + 1);
     setIndex((i) => i + 1);
   }, [thread]);
@@ -251,11 +255,26 @@ function CategorizeScreen({
             {Array.from({ length: AI_COUNT }, (_, i) => {
               const key = `ai${i + 1}`;
               const count = assignments[key]?.length ?? 0;
+              const selected = pendingKeys.has(key);
               return (
                 <button
                   key={key}
-                  onClick={() => assign([key])}
-                  className="relative py-2.5 rounded-lg bg-zinc-800 hover:bg-violet-700 active:scale-95 transition-all text-sm font-semibold text-zinc-200 hover:text-white"
+                  onClick={() => {
+                    if (!multiMode) {
+                      assign([key]);
+                    } else {
+                      setPendingKeys((prev) => {
+                        const next = new Set(prev);
+                        next.has(key) ? next.delete(key) : next.add(key);
+                        return next;
+                      });
+                    }
+                  }}
+                  className={`relative py-2.5 rounded-lg active:scale-95 transition-all text-sm font-semibold
+                    ${selected
+                      ? "bg-violet-600 text-white ring-2 ring-violet-400"
+                      : "bg-zinc-800 hover:bg-violet-700 text-zinc-200 hover:text-white"
+                    }`}
                 >
                   {i + 1}
                   {count > 0 && (
@@ -271,11 +290,36 @@ function CategorizeScreen({
           {/* Secondary row */}
           <div className="flex gap-2">
             <button
-              onClick={skip}
-              className="flex-1 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 text-sm transition-colors"
+              onClick={() => {
+                setMultiMode((m) => {
+                  if (m) setPendingKeys(new Set()); // clear on exit
+                  return !m;
+                });
+              }}
+              className={`px-3 py-2 rounded-lg text-sm transition-colors font-medium
+                ${multiMode
+                  ? "bg-violet-700 text-white"
+                  : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200"
+                }`}
             >
-              Skip
+              Multi
             </button>
+            {multiMode && pendingKeys.size > 0 && (
+              <button
+                onClick={() => assign([...pendingKeys])}
+                className="flex-1 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
+              >
+                Assign to {pendingKeys.size} slot{pendingKeys.size > 1 ? "s" : ""} →
+              </button>
+            )}
+            {(!multiMode || pendingKeys.size === 0) && (
+              <button
+                onClick={skip}
+                className="flex-1 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 text-sm transition-colors"
+              >
+                Skip
+              </button>
+            )}
             <button
               onClick={back}
               disabled={history.length === 0}

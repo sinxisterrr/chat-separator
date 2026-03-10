@@ -25,7 +25,9 @@
       "Bash(cmd /c \"taskkill /F /PID 21960\")",
       "Bash(cmd /c \"taskkill /F /PID 26772\")",
       "Bash(cmd /c \"wmic process where ProcessId=21960 get Name,CommandLine 2>nul\")",
-      "Bash(powershell -Command \"Get-Process -Id 21960,26772 | Select-Object Id,ProcessName,CommandLine 2>&1\")"
+      "Bash(powershell -Command \"Get-Process -Id 21960,26772 | Select-Object Id,ProcessName,CommandLine 2>&1\")",
+      "Bash(powershell -Command \"Stop-Process -Id 21960,26772 -Force; Start-Sleep 1; \\(Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue\\) -eq $null\")",
+      "Bash(powershell -Command \"Stop-Process -Id 21960,26772 -Force\")"
     ]
   }
 }
