@@ -5,9 +5,12 @@
   "type": "module",
   "main": "dist/core/categorize.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm --prefix web ci --include=dev && npm --prefix web run build",
+    "dev": "npm --prefix web run dev",
+    "start": "npm --prefix web run start",
+    "build:cli": "tsc",
+    "start:cli": "node dist/core/categorize.js",
     "categorize": "node dist/core/categorize.js",
-    "start": "node dist/core/categorize.js",
     "parse": "node dist/core/parse.js",
     "test-flow": "tsx test-flow.ts",
     "diagnose": "tsx diagnose-content.ts"
