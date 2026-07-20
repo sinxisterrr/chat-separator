@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chat Separator website
 
-## Getting Started
+A browser-only interface for sorting threads from a ChatGPT
+`conversations.json` export into 14 AI slots and downloading the result as a
+zip archive.
 
-First, run the development server:
+The uploaded export never leaves the browser. The site has no API routes,
+database connection, embedding service, analytics integration, or other
+server-side processing.
+
+## Environment variables
+
+None.
+
+The `DATABASE_URL` and `EMBEDDER_URL` variables in the parent project's
+`.env.example` belong to the older command-line parser and are not read by the
+website.
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+The production page is statically rendered. Fonts use local system fallbacks,
+so the build does not need to download assets from Google Fonts.
 
-To learn more about Next.js, take a look at the following resources:
+## Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Upload a ChatGPT `conversations.json` export.
+2. Assign each thread to one or more numbered AI slots, or skip it.
+3. Use **Back** to undo the most recent assignment.
+4. Select **Done** at any time or categorize every thread.
+5. Download `categorized-conversations.zip`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Only non-empty slots are included in the archive as `ai1.json` through
+`ai14.json`.

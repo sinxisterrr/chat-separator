@@ -104,9 +104,19 @@ function UploadZone({
         <p className="mt-4 text-red-400 text-sm max-w-md text-center">{error}</p>
       )}
 
-      <p className="mt-8 text-zinc-600 text-xs">
-        Everything runs in your browser — your file never leaves your device.
-      </p>
+      <div className="mt-8 text-center text-xs space-y-2">
+        <p className="text-zinc-600">
+          Everything runs in your browser — your file never leaves your device.
+        </p>
+        <a
+          href="https://github.com/sinxisterrr/chat-separator"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-violet-400 hover:text-violet-300 underline underline-offset-4 transition-colors"
+        >
+          Audit the source code on GitHub ↗
+        </a>
+      </div>
     </div>
   );
 }
@@ -265,7 +275,11 @@ function CategorizeScreen({
                     } else {
                       setPendingKeys((prev) => {
                         const next = new Set(prev);
-                        next.has(key) ? next.delete(key) : next.add(key);
+                        if (next.has(key)) {
+                          next.delete(key);
+                        } else {
+                          next.add(key);
+                        }
                         return next;
                       });
                     }
