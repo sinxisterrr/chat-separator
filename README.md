@@ -1,7 +1,8 @@
 # Chat Separator
 
-Chat Separator is a browser-only tool for sorting threads from a ChatGPT
-`conversations.json` export into 14 downloadable AI files.
+Chat Separator is a browser-only tool for sorting threads from a
+`conversations.json` export into 14 downloadable AI files. It supports
+exports from ChatGPT, Claude.ai, and Grok.
 
 The website lives in [`web`](./web). Root-level deployment commands target the
 website so generic Node hosting platforms build and serve the correct entry

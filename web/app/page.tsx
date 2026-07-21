@@ -45,7 +45,7 @@ function UploadZone({
   function handle(file: File) {
     setLocalError(null);
     if (!file.name.endsWith(".json")) {
-      setLocalError("Please upload a .json file (your ChatGPT conversations export).");
+      setLocalError("Please upload a .json file (a ChatGPT, Claude, or Grok conversations export).");
       return;
     }
     onFile(file);
@@ -57,7 +57,7 @@ function UploadZone({
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 p-6">
       <h1 className="text-3xl font-bold mb-2 tracking-tight">Chat Separator</h1>
       <p className="text-zinc-400 mb-10 text-sm text-center max-w-sm">
-        Upload your ChatGPT{" "}
+        Upload your ChatGPT, Claude, or Grok{" "}
         <code className="text-zinc-300 bg-zinc-800 px-1 rounded">conversations.json</code> export
         and sort each thread into one of 14 AI slots. Download as a zip when done.
       </p>
@@ -451,6 +451,10 @@ export default function Home() {
         const root = parseConversationsJSON(text);
         const rawThreads = extractThreads(root);
         const built = buildMessageThreads(rawThreads);
+        if (built.length === 0) {
+          setParseError("Parsed the file but found no conversations inside. Is this the right export?");
+          return;
+        }
         setThreads(built);
         setStage("categorizing");
       } catch (err) {

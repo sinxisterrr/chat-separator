@@ -1,4 +1,5 @@
-// Browser-safe port of the conversations.json parsing logic
+// Browser-safe port of the conversations.json parsing logic.
+// Supports ChatGPT, Claude.ai, and Grok exports.
 
 export interface MappingNode {
   id: string;
@@ -15,6 +16,146 @@ export interface MappingNode {
 
 export interface ExportRoot {
   mapping: Record<string, MappingNode>;
+}
+
+// ─── Grok export shape ─────────────────────────────────────────
+interface GrokResponse {
+  response: {
+    _id: string;
+    conversation_id: string;
+    message: string;
+    sender: "human" | "assistant";
+    create_time?: { $date?: { $numberLong?: string } };
+    parent_response_id: string | null;
+    model?: string;
+  };
+}
+
+interface GrokConversation {
+  conversation: { id: string; title?: string; create_time?: string };
+  responses: GrokResponse[];
+}
+
+interface GrokExport {
+  conversations: GrokConversation[];
+}
+
+function isGrokExport(parsed: unknown): parsed is GrokExport {
+  const p = parsed as { conversations?: unknown[] };
+  return (
+    !!p &&
+    Array.isArray(p.conversations) &&
+    p.conversations.length > 0 &&
+    (p.conversations[0] as { responses?: unknown[] })?.responses !== undefined
+  );
+}
+
+function convertGrokToMapping(grok: GrokExport): Record<string, MappingNode> {
+  const mapping: Record<string, MappingNode> = {};
+
+  for (const convo of grok.conversations) {
+    // Build children lookup once per conversation instead of an O(n²) filter per response.
+    const childrenById: Record<string, string[]> = {};
+    for (const resp of convo.responses) {
+      const parent = resp.response.parent_response_id;
+      if (parent) (childrenById[parent] ??= []).push(resp.response._id);
+    }
+
+    for (const resp of convo.responses) {
+      const r = resp.response;
+      const id = r._id;
+
+      let createTime: number | null = null;
+      const ms = r.create_time?.$date?.$numberLong;
+      if (ms) createTime = parseInt(ms, 10) / 1000;
+
+      const role = r.sender === "human" ? "user" : "assistant";
+
+      mapping[id] = {
+        id,
+        parent: r.parent_response_id,
+        children: childrenById[id] ?? [],
+        message: {
+          id,
+          author: { role },
+          content: { content_type: "text", parts: [r.message || ""] },
+          create_time: createTime,
+        },
+      };
+    }
+  }
+
+  return mapping;
+}
+
+// ─── Claude.ai export shape ────────────────────────────────────
+interface ClaudeContentBlock {
+  type: string;
+  text?: string;
+}
+
+interface ClaudeMessage {
+  uuid: string;
+  text?: string;
+  content?: ClaudeContentBlock[];
+  sender: "human" | "assistant";
+  created_at?: string;
+}
+
+interface ClaudeConversation {
+  uuid: string;
+  name?: string;
+  chat_messages: ClaudeMessage[];
+}
+
+function isClaudeExport(parsed: unknown): parsed is ClaudeConversation[] {
+  if (!Array.isArray(parsed) || parsed.length === 0) return false;
+  const first = parsed[0] as { chat_messages?: unknown; uuid?: unknown };
+  return first?.chat_messages !== undefined && first?.uuid !== undefined;
+}
+
+function convertClaudeToMapping(conversations: ClaudeConversation[]): Record<string, MappingNode> {
+  const mapping: Record<string, MappingNode> = {};
+
+  for (const convo of conversations) {
+    let prevId: string | null = null;
+
+    for (const msg of convo.chat_messages) {
+      const id = msg.uuid;
+
+      const text =
+        msg.content
+          ?.filter((c) => c.type === "text" && typeof c.text === "string")
+          .map((c) => c.text as string)
+          .join("\n")
+          .trim() ||
+        msg.text ||
+        "";
+
+      const role = msg.sender === "human" ? "user" : "assistant";
+      const createTime = msg.created_at ? new Date(msg.created_at).getTime() / 1000 : null;
+
+      if (prevId && mapping[prevId]) {
+        mapping[prevId].children.push(id);
+      }
+
+      mapping[id] = {
+        id,
+        parent: prevId,
+        children: [],
+        message: {
+          id,
+          author: { role },
+          content: { content_type: "text", parts: [text] },
+          create_time: Number.isFinite(createTime as number) ? createTime : null,
+        },
+      };
+
+      prevId = id;
+    }
+  }
+
+  return mapping;
 }
 
 export interface ConversationThread {
@@ -61,17 +202,32 @@ export function getText(msg: MappingNode["message"] | null | undefined): string 
 export function parseConversationsJSON(text: string): ExportRoot {
   const parsed = JSON.parse(text);
 
+  // Grok export: { conversations: [{ conversation, responses }] }
+  if (isGrokExport(parsed)) {
+    return { mapping: convertGrokToMapping(parsed) };
+  }
+
+  // Claude.ai export: [{ uuid, chat_messages }]
+  if (isClaudeExport(parsed)) {
+    return { mapping: convertClaudeToMapping(parsed) };
+  }
+
+  // ChatGPT array export: [{ mapping }]
   if (Array.isArray(parsed)) {
     const merged: Record<string, MappingNode> = {};
     for (const convo of parsed) {
       if (convo?.mapping) Object.assign(merged, convo.mapping);
     }
+    if (Object.keys(merged).length === 0) {
+      throw new Error("Recognized an array of conversations but none contained a ChatGPT `mapping` — is this the right export file?");
+    }
     return { mapping: merged };
   }
 
+  // Single ChatGPT conversation with mapping at root
   if (parsed?.mapping) return parsed as ExportRoot;
 
-  throw new Error("Unrecognized conversations.json format — expected a mapping object or array of conversations.");
+  throw new Error("Unrecognized conversations.json format — expected ChatGPT, Claude.ai, or Grok export.");
 }
 
 export function extractThreads(root: ExportRoot): ConversationThread[] {
